@@ -1,5 +1,5 @@
 import React from 'react';
-import '/home/sammysammyson/Tech Educators/Projects/Flutter 2.0/client/src/DiceResultsBox.css';
+import './DiceResultsBox.css';
 
 export default function DiceResultBox({ roll }) {
   if (!roll) return null;
