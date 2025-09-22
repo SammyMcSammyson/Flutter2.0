@@ -1,0 +1,79 @@
+.app {
+  text-align: center;
+  padding: 2rem;
+}
+
+.board {
+  display: flex;
+  justify-content: center;
+  gap: 4px; /* space between columns */
+  margin-top: 2rem;
+}
+
+.column {
+  display: flex;
+  flex-direction: column-reverse; /* bottom to top */
+  border: 1px solid black;
+  width: 80px;
+  min-height: 400px;
+}
+
+.segment {
+  height: 20px;
+  border-top: 1px solid black;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+}
+
+.dot {
+  width: 12px;
+  height: 12px;
+  background-color: black;
+  border-radius: 50%;
+}
+.traveller-peg {
+  width: 16px;
+  height: 16px;
+  background-color: orange;
+  color: white;
+  font-size: 12px;
+  text-align: center;
+  border-radius: 50%;
+  position: absolute;
+}
+
+.parent-peg {
+  width: 16px;
+  height: 16px;
+  background-color: orangered;
+  color: white;
+  font-size: 12px;
+  text-align: center;
+  border-radius: 50%;
+  position: absolute;
+  top: 2px; /* offset to avoid overlapping traveller peg */
+  left: 2px;
+}
+
+.peg {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  text-align: center;
+  line-height: 22px;
+  font-size: 12px;
+  color: white;
+  margin: 2px auto;
+}
+
+.parent {
+  background-color: blue;
+  border: 2px solid black;
+}
+
+.traveller {
+  background-color: red;
+  opacity: 0.8;
+}
