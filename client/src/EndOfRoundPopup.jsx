@@ -1,5 +1,4 @@
 import React from 'react';
-import '.EndOfRoundPopup.css';
 export default function EndOfRoundPopup({ show, parentPegs, onClose }) {
   if (!show) return null;
 
