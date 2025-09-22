@@ -8,3 +8,6 @@ button {
   font-size: 1rem;
   margin-top: 1rem;
 }
+.dice-result-container {
+  margin-top: 0.1in; /* or 200px if you want */
+}

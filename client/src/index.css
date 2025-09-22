@@ -69,11 +69,11 @@
 }
 
 .parent {
-  background-color: blue;
+  background-color: yellowgreen;
   border: 2px solid black;
 }
 
 .traveller {
-  background-color: red;
+  background-color: orange;
   opacity: 0.8;
 }
