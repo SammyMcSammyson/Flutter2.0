@@ -1,5 +1,5 @@
 import React from 'react';
-import '/home/sammysammyson/Tech Educators/Projects/Flutter 2.0/client/src/EndOfRoundPopup.css';
+import '.EndOfRoundPopup.css';
 export default function EndOfRoundPopup({ show, parentPegs, onClose }) {
   if (!show) return null;
 
