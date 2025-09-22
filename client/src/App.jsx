@@ -7,8 +7,8 @@ import socket from './socket';
 import { TRACK_COLUMNS } from './constants';
 import TurnTimer from './TurnTimer';
 import PlayerNotification from './PlayerNotification';
+import SharesPanel from './sharesPanel';
 import './App.css';
-
 export default function App() {
   const [roll, setRoll] = useState(null);
   const [parentPegs, setParentPegs] = useState({});
@@ -16,13 +16,22 @@ export default function App() {
   const [mySocketId, setMySocketId] = useState(null);
   const [currentPlayer, setCurrentPlayer] = useState(null);
 
+  // Shares-related state
+  const [playersData, setPlayersData] = useState({});
+  const [sharesLeft, setSharesLeft] = useState({});
+
   useEffect(() => {
     socket.on('connect', () => setMySocketId(socket.id));
+
     socket.on('diceRolled', setRoll);
+
     socket.on('stateUpdate', (state) => {
       setParentPegs(state.parentPegs);
       setTravellerPegs(state.travellerPegs);
+      if (state.playersData) setPlayersData(state.playersData);
+      if (state.sharesLeft) setSharesLeft(state.sharesLeft);
     });
+
     socket.on('turnUpdate', (data) => setCurrentPlayer(data.currentPlayer));
 
     return () => {
@@ -36,30 +45,62 @@ export default function App() {
   const handleRoll = () => {
     if (mySocketId === currentPlayer) socket.emit('rollDice');
   };
+
   const handleReset = () => socket.emit('resetGame');
+
+  const handleBuyShare = (track) => {
+    if (mySocketId === currentPlayer) socket.emit('buyShare', track);
+  };
+
+  const handleSellShare = (track) => {
+    if (mySocketId === currentPlayer) socket.emit('sellShare', track);
+  };
 
   const isMyTurn = mySocketId === currentPlayer;
 
   return (
     <div className='app'>
-      <h1>Traveller Tracks</h1>
-      <Dice handleRoll={handleRoll} roll={roll} disabled={!isMyTurn} />
-      <div className='dice-result-container'>
-        <DiceResultBox roll={roll} />
+      <h1 className='title'>Traveller Tracks</h1>
+
+      <div className='game-container'>
+        {/* Left side */}
+        <div className='sidebar'>
+          <Dice handleRoll={handleRoll} roll={roll} disabled={!isMyTurn} />
+
+          <div className='dice-result-container'>
+            <DiceResultBox roll={roll} />
+          </div>
+
+          <TurnTimer currentPlayer={currentPlayer} mySocketId={mySocketId} />
+          <PlayerNotification
+            currentPlayer={currentPlayer}
+            mySocketId={mySocketId}
+          />
+
+          <SharesPanel
+            mySocketId={mySocketId}
+            currentPlayer={currentPlayer}
+            playersData={playersData}
+            sharesLeft={sharesLeft}
+            onBuyShare={handleBuyShare}
+            onSellShare={handleSellShare}
+          />
+
+          <button onClick={handleReset} className='reset-button'>
+            Reset Game
+          </button>
+        </div>
+
+        {/* Right side */}
+        <div className='board-container'>
+          <Board
+            columns={TRACK_COLUMNS}
+            parentPegs={parentPegs}
+            travellerPegs={travellerPegs}
+          />
+        </div>
       </div>
-      <TurnTimer currentPlayer={currentPlayer} mySocketId={mySocketId} />
-      <PlayerNotification
-        currentPlayer={currentPlayer}
-        mySocketId={mySocketId}
-      />
-      <button onClick={handleReset} className='reset-button'>
-        Reset Game
-      </button>
-      <Board
-        columns={TRACK_COLUMNS}
-        parentPegs={parentPegs}
-        travellerPegs={travellerPegs}
-      />
+
       <EndOfRoundPopup />
     </div>
   );
