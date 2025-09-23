@@ -25,14 +25,29 @@ export function payDividends(gameState, colour) {
 }
 
 // 🎲 Roll dice for a player
-export function rollDiceForPlayer() {
-  const numberDie = Math.floor(Math.random() * 6) + 1;
-  const colourDie = COLORS[Math.floor(Math.random() * COLORS.length)];
-  return { numberDie, colourDie, roll: numberDie * 10 };
+function rollDice(socketId, io) {
+  if (!players.includes(socketId)) return;
+
+  const { numberDie, colourDie, roll } = rollDiceForPlayer();
+
+  // Move traveller and trigger end-of-round popup if needed
+  moveTraveller(gameState, colourDie, roll, io);
+
+  // Emit dice result and updated state
+  io.emit('diceRolled', { numberDie, colourDie, roll });
+  io.emit('stateUpdate', gameState);
+
+  // Move to the next player
+  nextPlayer();
 }
 
-// 🚶 Move a traveller, handle penalties, dividends, parent peg adjustments, and reset flags
-export function moveTraveller(gameState, colour, rollAmount) {
+export function rollDiceForPlayer() {
+  const numberDie = Math.floor(Math.random() * 6) + 1; // 1–6
+  const colourDie = COLORS[Math.floor(Math.random() * COLORS.length)]; // random colour
+  const roll = numberDie * 10; // traveller movement
+  return { numberDie, colourDie, roll };
+}
+export function moveTraveller(gameState, colour, rollAmount, io) {
   if (!COLORS.includes(colour)) return;
 
   // Initialize state if missing
@@ -41,70 +56,64 @@ export function moveTraveller(gameState, colour, rollAmount) {
   if (!gameState.dividendsPaid) gameState.dividendsPaid = {};
 
   let traveller = gameState.travellerPegs[colour] || 0;
-  let parent = gameState.parentPegs[colour] || 0;
-
-  console.log(
-    `[moveTraveller] START colour=${colour}, roll=${rollAmount}, traveller=${traveller}, parent=${parent}`
-  );
-  // Move traveller forward
   traveller += rollAmount;
-
-  // Immediately write to game state
   gameState.travellerPegs[colour] = traveller;
 
   // Apply downward penalties
   if ([170, 220, 260].includes(traveller)) {
     traveller = Math.max(0, traveller - 60);
-    gameState.travellerPegs[colour] = traveller; // update after penalty
+    gameState.travellerPegs[colour] = traveller;
   }
 
-  // 🔔 If traveller hits 270+ and triggers global update
-  if (traveller >= 270) {
+  // 🔔 End-of-round logic
+  if (traveller >= 270 && !gameState.roundEnded) {
     console.log(
-      `[moveTraveller] ${colour} hit 270+, triggering dividends & parent adjustment`
+      `[moveTraveller] ${colour} hit 270+ (traveller=${traveller}) and [SERVER] Emitting endOfRound`,
+      gameState.travellerPegs
     );
+    console.log('[SERVER] Emitting endOfRound with:', {
+      travellerPegs: gameState.travellerPegs,
+      parentPegs: gameState.parentPegs,
+    });
 
-    // 1️⃣ Pay dividends for all qualifying tracks
+    // 2️⃣ Set round-ended flag to prevent multiple emits
+    gameState.roundEnded = true;
+
+    // 1️⃣ Emit popup to clients immediately using travellerPegs
+    if (io) {
+      io.emit('endOfRound', {
+        travellerPegs: gameState.travellerPegs,
+        parentPegs: gameState.parentPegs,
+      });
+    }
+
+    // 3️⃣ Pay dividends & adjust parent pegs
     COLORS.forEach((c) => {
       const t = gameState.travellerPegs[c] || 0;
       if (t >= 230) payDividends(gameState, c);
     });
 
-    // 2️⃣ Adjust each parent peg independently based on new rules
     COLORS.forEach((c) => {
       let p = gameState.parentPegs[c] || 0;
       const t = gameState.travellerPegs[c] || 0;
-
-      if (t >= 270) p = Math.min(p + 20, 270); // top peg -> +2
-      else if (t >= 240 && t < 270) p = Math.min(p + 10, 270); // 240–269 -> +1
-      else if (t >= 220 && t < 240) p = p; // 220–239 -> no change
-      else if (t <= 210) p = Math.max(p - 10, 0); // 210 or below -> -1
-
+      if (t >= 270) p = Math.min(p + 20, 270);
+      else if (t >= 240 && t < 270) p = Math.min(p + 10, 270);
+      else if (t >= 220 && t < 240) p = p;
+      else if (t <= 210) p = Math.max(p - 10, 0);
       gameState.parentPegs[c] = p;
-      console.log(
-        `[moveTraveller] Parent peg for ${c} adjusted to ${p} (traveller=${t})`
-      );
     });
 
-    // 3️⃣ Reset all traveller pegs to their parent pegs
-    COLORS.forEach((c) => {
-      gameState.travellerPegs[c] = gameState.parentPegs[c];
-      console.log(
-        `[moveTraveller] Traveller ${c} reset to parent=${gameState.parentPegs[c]}`
-      );
-    });
+    // Reset all traveller pegs to parent pegs
+    COLORS.forEach(
+      (c) => (gameState.travellerPegs[c] = gameState.parentPegs[c])
+    );
 
-    // 4️⃣ Reset all dividend flags for next round
+    // Reset dividend flags
     COLORS.forEach((c) => (gameState.dividendsPaid[c] = false));
-    console.log(`[moveTraveller] Dividend flags reset`);
-  } else {
-    // Only save this traveller if 270+ logic didn't run
-    gameState.travellerPegs[colour] = traveller;
-  }
 
-  console.log(
-    `[moveTraveller] END colour=${colour}, traveller=${gameState.travellerPegs[colour]}`
-  );
+    // ✅ Reset roundEnded flag so next round can trigger again
+    gameState.roundEnded = false;
+  }
 }
 
 // Wrapper for syncing/capping pegs

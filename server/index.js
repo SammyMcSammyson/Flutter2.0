@@ -77,11 +77,11 @@ function nextPlayer() {
 }
 
 // --- Dice Handling ---
-function rollDice(socketId) {
+function rollDice(socketId, io) {
   if (!players.includes(socketId)) return;
 
   const { numberDie, colourDie, roll } = rollDiceForPlayer();
-  moveTraveller(gameState, colourDie, roll);
+  moveTraveller(gameState, colourDie, roll, io);
 
   gameState.turnsTaken++;
   io.emit('diceRolled', { roll, colourDie, numberDie });
@@ -134,8 +134,9 @@ io.on('connection', (socket) => {
   socket.on('rollDice', () => {
     if (socket.id !== players[currentTurnIndex]) return;
     clearTimeout(turnTimeout);
-    rollDice(socket.id);
-    nextPlayer();
+
+    // Pass `io` so moveTraveller can emit end-of-round popup
+    rollDice(socket.id, io);
   });
 
   // Buy/Sell shares

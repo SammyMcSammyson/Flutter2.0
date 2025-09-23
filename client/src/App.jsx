@@ -20,56 +20,85 @@ export default function App() {
   const [playersData, setPlayersData] = useState({});
   const [sharesLeft, setSharesLeft] = useState({});
 
+  // End-of-round popup
+  const [showEndOfRound, setShowEndOfRound] = useState(false);
+
   useEffect(() => {
-    socket.on('connect', () => setMySocketId(socket.id));
+    const onConnect = () => {
+      console.log('[CLIENT] Connected with ID:', socket.id);
+      setMySocketId(socket.id);
+    };
+    socket.onAny((event, ...args) => {
+      console.log('[CLIENT] Heard event:', event, args);
+    });
+
+    socket.on('connect', onConnect);
 
     socket.on('diceRolled', setRoll);
 
     socket.on('stateUpdate', (state) => {
-      console.log('stateUpdate received, parentPegs:', state.parentPegs); // debug
-
       setParentPegs(state.parentPegs);
-      console.log('stateUpdate received, parentPegs:', state.parentPegs); // debug
-
       setTravellerPegs(state.travellerPegs);
       if (state.playersData) setPlayersData(state.playersData);
       if (state.sharesLeft) setSharesLeft(state.sharesLeft);
-      console.log('=== STATE UPDATE RECEIVED ===');
-      console.log('parentPegs:', state.parentPegs);
-      console.log('playersData:', state.playersData);
-      console.log('sharesLeft:', state.sharesLeft);
     });
 
-    socket.on('turnUpdate', (data) => setCurrentPlayer(data.currentPlayer));
+    socket.on('turnUpdate', (data) => {
+      setCurrentPlayer(data.currentPlayer);
+    });
+
+    socket.on('endOfRound', (data) => {
+      console.log('hi');
+      console.log('[CLIENT] Raw endOfRound data:', data);
+      console.log('[CLIENT] TravellerPegs from payload:', data.travellerPegs);
+
+      setTravellerPegs(data.travellerPegs);
+      setShowEndOfRound(true);
+    });
 
     return () => {
-      socket.off('connect');
+      socket.off('connect', onConnect);
       socket.off('diceRolled');
       socket.off('stateUpdate');
       socket.off('turnUpdate');
+      socket.off('endOfRound');
+      socket.offAny();
     };
   }, []);
 
   const handleRoll = () => {
-    if (mySocketId === currentPlayer) socket.emit('rollDice');
+    if (mySocketId === currentPlayer) {
+      socket.emit('rollDice');
+    }
   };
 
-  const handleReset = () => socket.emit('resetGame');
+  const handleReset = () => {
+    socket.emit('resetGame');
+  };
 
   const handleBuyShare = (track) => {
-    if (mySocketId === currentPlayer) socket.emit('buyShare', track);
+    if (mySocketId === currentPlayer) {
+      socket.emit('buyShare', track);
+    }
   };
 
   const handleSellShare = (track) => {
-    if (mySocketId === currentPlayer) socket.emit('sellShare', track);
+    if (mySocketId === currentPlayer) {
+      socket.emit('sellShare', track);
+    }
   };
 
   const isMyTurn = mySocketId === currentPlayer;
 
+  const handleClosePopup = () => {
+    setShowEndOfRound(false);
+  };
+
+  console.log('Rendering popup, show=', showEndOfRound);
+
   return (
     <div className='app'>
       <h1 className='title'>Traveller Tracks</h1>
-
       <div className='game-container'>
         {/* Left side */}
         <div className='sidebar'>
@@ -109,8 +138,12 @@ export default function App() {
           />
         </div>
       </div>
-
-      <EndOfRoundPopup />
+      <EndOfRoundPopup
+        show={showEndOfRound}
+        parentPegs={parentPegs}
+        onClose={handleClosePopup}
+        travellerPegs={travellerPegs}
+      />
     </div>
   );
 }

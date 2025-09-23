@@ -1,12 +1,14 @@
 import React from 'react';
-export default function EndOfRoundPopup({ show, parentPegs, onClose }) {
+import './EndOfRoundPopup.css';
+
+export default function EndOfRoundPopup({ show, parentPegs = {}, onClose }) {
   if (!show) return null;
 
   return (
     <div className='popup-overlay'>
       <div className='popup-content'>
         <h2>End of Round!</h2>
-        <p>Traveller peg reached 200. Parent pegs updated:</p>
+        <p>The traveller peg reached 200. Parent pegs have been updated:</p>
         <ul>
           {Object.entries(parentPegs).map(([color, value]) => (
             <li key={color}>
