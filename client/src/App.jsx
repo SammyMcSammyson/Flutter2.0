@@ -26,10 +26,18 @@ export default function App() {
     socket.on('diceRolled', setRoll);
 
     socket.on('stateUpdate', (state) => {
+      console.log('stateUpdate received, parentPegs:', state.parentPegs); // debug
+
       setParentPegs(state.parentPegs);
+      console.log('stateUpdate received, parentPegs:', state.parentPegs); // debug
+
       setTravellerPegs(state.travellerPegs);
       if (state.playersData) setPlayersData(state.playersData);
       if (state.sharesLeft) setSharesLeft(state.sharesLeft);
+      console.log('=== STATE UPDATE RECEIVED ===');
+      console.log('parentPegs:', state.parentPegs);
+      console.log('playersData:', state.playersData);
+      console.log('sharesLeft:', state.sharesLeft);
     });
 
     socket.on('turnUpdate', (data) => setCurrentPlayer(data.currentPlayer));
@@ -84,6 +92,7 @@ export default function App() {
             sharesLeft={sharesLeft}
             onBuyShare={handleBuyShare}
             onSellShare={handleSellShare}
+            parentPegs={parentPegs}
           />
 
           <button onClick={handleReset} className='reset-button'>

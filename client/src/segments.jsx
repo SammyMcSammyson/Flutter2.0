@@ -1,4 +1,6 @@
 import React from 'react';
+import './segment.css';
+
 export default function Segment({
   col,
   value,
@@ -7,33 +9,11 @@ export default function Segment({
   isArrow,
 }) {
   return (
-    <div className='segment' style={{ position: 'relative', height: '20px' }}>
-      {/* Arrow for beige column */}
-      {isArrow && (
-        <div
-          style={{
-            color: '#000',
-            fontSize: '20px',
-            fontWeight: 'bold',
-            lineHeight: 1,
-            textAlign: 'center',
-            width: '100%',
-          }}
-        >
-          ↓
-        </div>
-      )}
-
-      {/* Dot for other columns */}
-      {!isArrow && col.hasDot && <div className='dot'></div>}
-
-      {/* Parent peg */}
+    <div className='segment'>
+      {isArrow && <div className='arrow'>SLUMP</div>}
+      {/*!isArrow && col.hasDot && <div className='dot'></div>*/}
       {isParent && <div className='peg parent'>P</div>}
-
-      {/* Traveller peg */}
       {isTraveller && <div className='peg traveller'>T</div>}
-
-      {/* Segment value for beige */}
       {col.color === 'beige' && !isArrow && (
         <span className='segment-number'>{value}</span>
       )}

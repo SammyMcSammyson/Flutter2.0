@@ -1,0 +1,133 @@
+/* Base Segment */
+.segment {
+  position: relative;
+  height: 3rem; /* responsive height */
+  margin: 0.2rem 0;
+  border-radius: 0.4rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.2s;
+  background-color: #f0f0f0;
+  border: 0.1rem solid #ccc;
+}
+
+/* Pegs */
+.peg {
+  width: 1.5rem;
+  height: 1.5rem;
+  border-radius: 50%;
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  transition: all 0.3s ease;
+  border: 0.1rem solid #000;
+  box-sizing: border-box;
+  font-family: 'Verdana', sans-serif;
+  font-weight: bold;
+  font-size: 0.8rem;
+  text-align: center;
+  line-height: 1.5rem;
+  color: #fff;
+}
+
+.peg.parent {
+  background-color: red;
+  left: 5%; /* left side of segment */
+}
+
+.peg.traveller {
+  background-color: blue;
+  left: 50%; /* right side of segment */
+}
+
+/* Dots */
+.dot {
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 50%;
+  background-color: #555;
+}
+
+/* Arrow for special column */
+.arrow {
+  font-size: 1rem;
+  font-weight: bold;
+  text-align: center;
+  width: 100%;
+  animation: bounce 1s infinite;
+}
+
+@keyframes bounce {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-0.3rem);
+  }
+}
+
+/* Responsive Media Queries */
+
+/* Tablets */
+@media (max-width: 1024px) {
+  .segment {
+    height: 2.5rem;
+    border-radius: 0.3rem;
+  }
+
+  .peg {
+    width: 1.2rem;
+    height: 1.2rem;
+    font-size: 0.7rem;
+    line-height: 1.2rem;
+  }
+
+  .peg.parent {
+    left: 22%;
+  }
+  .peg.traveller {
+    left: 63%;
+  }
+
+  .dot {
+    width: 0.4rem;
+    height: 0.4rem;
+  }
+
+  .arrow {
+    font-size: 0.9rem;
+  }
+}
+
+/* Mobile phones */
+@media (max-width: 768px) {
+  .segment {
+    height: 2rem;
+    border-radius: 0.25rem;
+  }
+
+  .peg {
+    width: 1rem;
+    height: 1rem;
+    font-size: 0.65rem;
+    line-height: 1rem;
+  }
+
+  .peg.parent {
+    left: 20%;
+  }
+  .peg.traveller {
+    left: 60%;
+  }
+
+  .dot {
+    width: 0.35rem;
+    height: 0.35rem;
+  }
+
+  .arrow {
+    font-size: 0.8rem;
+  }
+}
