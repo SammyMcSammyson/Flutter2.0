@@ -1,25 +1,28 @@
-let turnTimeout = null;
+export class TurnManager {
+  constructor(players, TURN_DURATION, rollDiceFn) {
+    this.players = players;
+    this.TURN_DURATION = TURN_DURATION;
+    this.rollDiceFn = rollDiceFn;
+    this.currentTurnIndex = 0;
+    this.turnTimeout = null;
+  }
 
-export function startTurn(
-  io,
-  players,
-  currentTurnIndex,
-  TURN_DURATION,
-  rollDice,
-  nextPlayer
-) {
-  if (!players.length) return;
-  const currentPlayer = players[currentTurnIndex];
-  io.emit('turnUpdate', { currentPlayer, turnDuration: TURN_DURATION });
+  startTurn(io) {
+    if (!this.players.length) return;
+    const currentPlayer = this.players[this.currentTurnIndex];
 
-  clearTimeout(turnTimeout);
-  turnTimeout = setTimeout(() => {
-    console.log(`Time up for ${currentPlayer}, auto-rolling dice`);
-    rollDice(currentPlayer);
-    nextPlayer();
-  }, TURN_DURATION * 1000);
-}
+    io.emit('turnUpdate', { currentPlayer, turnDuration: this.TURN_DURATION });
 
-export function nextPlayer(players, currentTurnIndex) {
-  return (currentTurnIndex + 1) % players.length;
+    clearTimeout(this.turnTimeout);
+    this.turnTimeout = setTimeout(() => {
+      console.log(`Time up for ${currentPlayer}, auto-rolling dice`);
+      this.rollDiceFn(currentPlayer);
+      this.nextPlayer(io);
+    }, this.TURN_DURATION * 1000);
+  }
+
+  nextPlayer(io) {
+    this.currentTurnIndex = (this.currentTurnIndex + 1) % this.players.length;
+    this.startTurn(io);
+  }
 }

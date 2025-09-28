@@ -1,127 +1,141 @@
 import { COLORS } from './gameConstants.js';
+import { calculateTotalAssets } from './utils.js';
+import { initGameState, initPlayerData } from './gameState.js';
 
-// 💰 Pay dividends for a track if its traveller qualifies
+export function resetGame(gameState) {
+  const oldPlayers = Object.keys(gameState.playersData);
+
+  // Reset the main game state
+  const newGameState = initGameState();
+
+  // Re-initialize player data for existing players
+  oldPlayers.forEach((playerId) => {
+    newGameState.playersData[playerId] = initPlayerData(playerId);
+  });
+
+  // Copy back to the original gameState object
+  Object.keys(gameState).forEach((key) => delete gameState[key]);
+  Object.assign(gameState, newGameState);
+}
+
+// Check for winner
+export function checkForWinner(gameState, io) {
+  const winners = Object.values(gameState.playersData).filter(
+    (player) => calculateTotalAssets(player, gameState.parentPegs) >= 600
+  );
+
+  if (!winners.length) return;
+
+  console.log(
+    '[SERVER] Winner detected!',
+    winners.map((w) => w.id)
+  );
+
+  if (io) {
+    io.emit('gameOver', {
+      winners: winners.map((w) => ({
+        id: w.id,
+        totalAssets: calculateTotalAssets(w, gameState.parentPegs),
+      })),
+      parentPegs: gameState.parentPegs,
+      travellerPegs: gameState.travellerPegs,
+    });
+  }
+  gameState.roundEnded = true;
+  resetGame(gameState);
+}
+
+// Pay dividends if traveller qualifies
 export function payDividends(gameState, colour) {
   const travellerPos = gameState.travellerPegs[colour] || 0;
   let payout = 0;
 
   if (travellerPos >= 270) payout = 20;
-  else if (travellerPos >= 240 && travellerPos < 270) payout = 10;
-  else if (travellerPos >= 230 && travellerPos < 240) payout = 5;
+  else if (travellerPos >= 240) payout = 10;
+  else if (travellerPos >= 230) payout = 5;
 
-  if (payout === 0) return;
+  if (!payout) return;
+
+  if (!Array.isArray(gameState.dividendsPaid[colour])) {
+    gameState.dividendsPaid[colour] = [];
+  }
 
   Object.values(gameState.playersData).forEach((player) => {
     const sharesOwned = player.ownedShares[colour] || 0;
-    if (sharesOwned > 0) {
-      player.coins += sharesOwned * payout;
-      console.log(
-        `[payDividends] Paid ${sharesOwned * payout} to ${
-          player.id
-        } for ${colour}`
-      );
-    }
+    if (!sharesOwned) return;
+
+    const totalPayout = sharesOwned * payout;
+    player.coins += totalPayout;
+
+    gameState.dividendsPaid[colour].push({
+      playerId: player.id,
+      shares: sharesOwned,
+      payout: totalPayout,
+    });
+
+    console.log(
+      `[payDividends] Paid ${totalPayout} to ${player.id} for ${colour}`
+    );
   });
 }
 
-// 🎲 Roll dice for a player
-function rollDice(socketId, io) {
-  if (!players.includes(socketId)) return;
-
-  const { numberDie, colourDie, roll } = rollDiceForPlayer();
-
-  // Move traveller and trigger end-of-round popup if needed
-  moveTraveller(gameState, colourDie, roll, io);
-
-  // Emit dice result and updated state
-  io.emit('diceRolled', { numberDie, colourDie, roll });
-  io.emit('stateUpdate', gameState);
-
-  // Move to the next player
-  nextPlayer();
-}
-
+// Roll dice for a player
 export function rollDiceForPlayer() {
   const numberDie = Math.floor(Math.random() * 6) + 1; // 1–6
-  const colourDie = COLORS[Math.floor(Math.random() * COLORS.length)]; // random colour
-  const roll = numberDie * 10; // traveller movement
-  return { numberDie, colourDie, roll };
+  const colourDie = COLORS[Math.floor(Math.random() * COLORS.length)];
+  return { numberDie, colourDie, roll: numberDie * 10 };
 }
+
+// Move traveller and handle end-of-round
 export function moveTraveller(gameState, colour, rollAmount, io) {
   if (!COLORS.includes(colour)) return;
 
-  // Initialize state if missing
   if (!gameState.travellerPegs) gameState.travellerPegs = {};
   if (!gameState.parentPegs) gameState.parentPegs = {};
   if (!gameState.dividendsPaid) gameState.dividendsPaid = {};
 
-  let traveller = gameState.travellerPegs[colour] || 0;
-  traveller += rollAmount;
+  let traveller = (gameState.travellerPegs[colour] || 0) + rollAmount;
   gameState.travellerPegs[colour] = traveller;
 
-  // Apply downward penalties
   if ([170, 220, 260].includes(traveller)) {
     traveller = Math.max(0, traveller - 60);
     gameState.travellerPegs[colour] = traveller;
   }
 
-  // 🔔 End-of-round logic
   if (traveller >= 270 && !gameState.roundEnded) {
-    console.log(
-      `[moveTraveller] ${colour} hit 270+ (traveller=${traveller}) and [SERVER] Emitting endOfRound`,
-      gameState.travellerPegs
-    );
-    console.log('[SERVER] Emitting endOfRound with:', {
-      travellerPegs: gameState.travellerPegs,
-      parentPegs: gameState.parentPegs,
-    });
-
-    // 2️⃣ Set round-ended flag to prevent multiple emits
     gameState.roundEnded = true;
 
-    // 1️⃣ Emit popup to clients immediately using travellerPegs
+    COLORS.forEach((c) => {
+      if ((gameState.travellerPegs[c] || 0) >= 230) payDividends(gameState, c);
+    });
+
     if (io) {
       io.emit('endOfRound', {
         travellerPegs: gameState.travellerPegs,
         parentPegs: gameState.parentPegs,
+        dividendsPaid: gameState.dividendsPaid,
       });
     }
 
-    // 3️⃣ Pay dividends & adjust parent pegs
+    // Update parent pegs
     COLORS.forEach((c) => {
       const t = gameState.travellerPegs[c] || 0;
-      if (t >= 230) payDividends(gameState, c);
-    });
-
-    COLORS.forEach((c) => {
       let p = gameState.parentPegs[c] || 0;
-      const t = gameState.travellerPegs[c] || 0;
+
       if (t >= 270) p = Math.min(p + 20, 270);
-      else if (t >= 240 && t < 270) p = Math.min(p + 10, 270);
-      else if (t >= 220 && t < 240) p = p;
+      else if (t >= 240) p = Math.min(p + 10, 270);
       else if (t <= 210) p = Math.max(p - 10, 0);
+
       gameState.parentPegs[c] = p;
+      gameState.travellerPegs[c] = p; // reset traveller to parent
+      gameState.dividendsPaid[c] = [];
     });
 
-    // Reset all traveller pegs to parent pegs
-    COLORS.forEach(
-      (c) => (gameState.travellerPegs[c] = gameState.parentPegs[c])
-    );
-
-    // Reset dividend flags
-    COLORS.forEach((c) => (gameState.dividendsPaid[c] = false));
-
-    // ✅ Reset roundEnded flag so next round can trigger again
     gameState.roundEnded = false;
   }
 }
 
-// Wrapper for syncing/capping pegs
-export function updateParentPegsIfNeeded(gameState) {
-  COLORS.forEach((c) => moveTraveller(gameState, c, 0));
-}
-
-// 🛒 Buy a share
+// Buy/Sell Shares
 export function buyShare(gameState, playerData, trackColor) {
   if (!COLORS.includes(trackColor)) return false;
 
@@ -132,16 +146,9 @@ export function buyShare(gameState, playerData, trackColor) {
   playerData.coins -= sharePrice + 5;
   playerData.ownedShares[trackColor] += 1;
   gameState.sharesLeft[trackColor] -= 1;
-
-  console.log(
-    `[buyShare] ${playerData.id} bought 1 share of ${trackColor} for ${
-      sharePrice + 5
-    }`
-  );
   return true;
 }
 
-// 💵 Sell a share
 export function sellShare(gameState, playerData, trackColor) {
   if (!COLORS.includes(trackColor)) return false;
   if ((playerData.ownedShares[trackColor] || 0) <= 0) return false;
@@ -150,21 +157,5 @@ export function sellShare(gameState, playerData, trackColor) {
   playerData.coins += sharePrice;
   playerData.ownedShares[trackColor] -= 1;
   gameState.sharesLeft[trackColor] += 1;
-
-  console.log(
-    `[sellShare] ${playerData.id} sold 1 share of ${trackColor} for ${sharePrice}`
-  );
   return true;
-}
-
-// 👤 Initialize a new player
-export function initPlayerData(playerId) {
-  const ownedShares = {};
-  COLORS.forEach((color) => (ownedShares[color] = 0));
-
-  return {
-    id: playerId,
-    coins: 300,
-    ownedShares,
-  };
 }

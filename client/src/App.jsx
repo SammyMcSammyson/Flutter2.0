@@ -15,6 +15,7 @@ export default function App() {
   const [travellerPegs, setTravellerPegs] = useState({});
   const [mySocketId, setMySocketId] = useState(null);
   const [currentPlayer, setCurrentPlayer] = useState(null);
+  const [dividendsPaid, setDividendsPaid] = useState({});
 
   // Shares-related state
   const [playersData, setPlayersData] = useState({});
@@ -53,6 +54,8 @@ export default function App() {
       console.log('[CLIENT] TravellerPegs from payload:', data.travellerPegs);
 
       setTravellerPegs(data.travellerPegs);
+      if (data.parentPegs) setParentPegs(data.parentPegs);
+      if (data.dividendsPaid) setDividendsPaid(data.dividendsPaid);
       setShowEndOfRound(true);
     });
 
@@ -143,6 +146,7 @@ export default function App() {
         parentPegs={parentPegs}
         onClose={handleClosePopup}
         travellerPegs={travellerPegs}
+        dividendsPaid={dividendsPaid}
       />
     </div>
   );

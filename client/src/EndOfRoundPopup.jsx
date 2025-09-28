@@ -1,15 +1,34 @@
 import React from 'react';
 import './EndOfRoundPopup.css';
 
-export default function EndOfRoundPopup({ show, parentPegs = {}, onClose }) {
+export default function EndOfRoundPopup({
+  show,
+  parentPegs = {},
+  onClose,
+  dividendsPaid = {},
+}) {
   if (!show) return null;
 
   return (
     <div className='popup-overlay'>
       <div className='popup-content'>
         <h2>End of Round!</h2>
+        <p>Dividends Paid:</p>
+        <ul style={{ listStyleType: 'none' }}>
+          {Object.entries(dividendsPaid).map(([color, recipients]) => (
+            <li key={color}>
+              <strong>{color}:</strong>{' '}
+              {recipients.length > 0
+                ? recipients
+                    .map((r) => `${r.playerId} (${r.payout})`)
+                    .join(', ')
+                : 'No payouts'}
+            </li>
+          ))}
+        </ul>
+
         <p>The traveller peg reached 200. Parent pegs have been updated:</p>
-        <ul>
+        <ul style={{ listStyleType: 'none' }}>
           {Object.entries(parentPegs).map(([color, value]) => (
             <li key={color}>
               <strong>{color}:</strong> {value}
